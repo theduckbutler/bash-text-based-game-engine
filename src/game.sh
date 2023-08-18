@@ -130,6 +130,11 @@ while [ $won == "0" ]; do
                     else
                         action_pos="$((${actions[$(($? + 1))]} + 1))"
                     fi
+                    ###whether or not to prepare array of indices for situational ifs
+                    unset $accessed_indices
+                    if [[ "${current_action[*]}" =~ "?" ]]; then
+                        accessed_indices[0]="${!current_action}"
+                    fi
                     ##for every index from start to end that is accessed
                     for (( i=$action_pos; i<=${#current_action[@]}; i++ )); do
                         ###if current index is a #, jump to that index within the array
@@ -144,7 +149,7 @@ while [ $won == "0" ]; do
                                 echo -e "[$action_num] '${current_action[$(( $(($i-1)) + $((2 * j)) ))]}'"
                                 action_num=$(($action_num + 1))
                             done
-                            echo -e "\n\n"
+                            echo -e "\n"
                             read -p "You pick... "
                             if [[ "$REPLY" != *" "* ]]; then
                                 if [[ $REPLY -le 0 ]] || [[ $REPLY -gt $(($action_num - 1)) ]]; then
@@ -157,6 +162,17 @@ while [ $won == "0" ]; do
                                 action_num=1
                                 continue
                             fi
+                            ###adds index of chosen answer to array, for situational ifs
+                            accessed_indices+=($(( $(($i-1)) + $((2 * $REPLY)) )))
+
+                            ###VERY SPECIAL, VERY SPECIFICALLY TIME DEPENDENT SITUATIONAL IF
+                            if [[ "${accessed_indices[@]}" == "hallway_door 15 44 75 102" ]]; then
+                                i=114
+                                echo -e "\n"
+                                continue
+                            fi
+                            ###
+
                             ###jump to index of option chosen
                             echo -e -n "\n\nYou: "
                             echo -e "'${current_action[$(( $(($i-1)) + $((2 * $REPLY)) ))]}'\n\n" | randtype -t 15,7500
@@ -165,12 +181,13 @@ while [ $won == "0" ]; do
                                 current_action[$i]=$(( ${current_action[$i]} - 1 ))
                                 i=$(( ${current_action[$(( $(($i + 1)) + $((2 * $REPLY)) ))]} + 2 ))
                             else
-                                echo -e "'${current_action[ ${current_action[$(( $i + $((2 * $REPLY)) ))]} ]}'" | randtype -t 15,7500
+                                echo -e "${current_action[ ${current_action[$(( $i + $((2 * $REPLY)) ))]} ]}" | randtype -t 15,7500
                                 i=$(( ${current_action[$(( $i + $((2 * $REPLY)) ))]} + 2 ))
                             fi
                             ###quick check for any immediate ends or additional questions
                             if [[ ${current_action[$i+1]} == "?" ]]; then
                                 action_num=1
+                                echo -e "\n"
                                 continue
                             fi
                             if [[ ${current_action[$(($i-1))]} == "!" ]]; then
@@ -184,7 +201,7 @@ while [ $won == "0" ]; do
                         fi
 
                         ##Situational ifs
-
+                        
                         ###
 
                     done
@@ -249,6 +266,11 @@ while [ $won == "0" ]; do
                     else
                         dialogue_pos="$((${people[$(($? + 1))]} + 1))"
                     fi
+                    ###whether or not to prepare array of indices for situational ifs
+                    unset $accessed_indices
+                    if [[ "${current_person[*]}" =~ "?" ]]; then
+                        accessed_indices[0]="${!current_person}"
+                    fi
                     ##for every index from start to end that is accessed
                     for (( i=$dialogue_pos; i<=${#current_person[@]}; i++ )); do
                         ###if current index is a #, jump to that index within the array
@@ -270,7 +292,7 @@ while [ $won == "0" ]; do
                                 echo -e "[$speak_num] '${current_person[$(( $(($i-1)) + $((2 * j)) ))]}'"
                                 speak_num=$(($speak_num + 1))
                             done
-                            echo -e "\n\n"
+                            echo -e "\n"
                             read -p "You say... "
                             if [[ "$REPLY" != *" "* ]]; then
                                 if [[ $REPLY -le 0 ]] || [[ $REPLY -gt $(($speak_num - 1)) ]]; then
@@ -283,6 +305,8 @@ while [ $won == "0" ]; do
                                 speak_num=1
                                 continue
                             fi
+                            ###adds index of chosen answer to array, for situational ifs
+                            accessed_indices+=($(( $(($i-1)) + $((2 * $REPLY)) )))
                             ###jump to index of option chosen
                             echo -e -n "\n\nYou: "
                             echo -e "'${current_person[$(( $(($i-1)) + $((2 * $REPLY)) ))]}'\n\n" | randtype -t 15,7500
@@ -299,6 +323,7 @@ while [ $won == "0" ]; do
                             ###quick check for any immediate ends or additional questions
                             if [[ ${current_person[$i+1]} == "?" ]]; then
                                 speak_num=1
+                                echo -e "\n"
                                 continue
                             fi
                             if [[ ${current_person[$(($i-1))]} == "!" ]]; then
