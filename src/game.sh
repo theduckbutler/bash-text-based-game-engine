@@ -48,6 +48,24 @@ find_actions(){
         fi
     done
 }
+### function to simulate typewriter
+type() {
+    text="$1"
+    start="$2"
+    for k in $(seq $start $(expr length "${text}")); do
+        if [[ "${text:$k:1}" == "n" ]] && [[ "${text:$(($k-1)):1}" == "\\" ]]; then
+            continue
+        fi
+        if [[ "${text:$k:1}" == "\\" ]] && [[ "${text:$(($k+1)):1}" == "n" ]]; then
+            echo #
+            continue
+        fi
+        echo -n "${text:$k:1}"
+        delay=`shuf -i 1-10 -n 1`
+        sleep `bc -l <<< "scale=2; $delay/100"`
+    done
+    echo #
+}
 
 echo "Title"
 echo -e "Introduction\n\n"
@@ -131,7 +149,7 @@ while [ $won == "0" ]; do
                         action_pos="$((${actions[$(($? + 1))]} + 1))"
                     fi
                     ###whether or not to prepare array of indices for situational ifs
-                    unset $accessed_indices
+                    accessed_indices=()
                     if [[ "${current_action[*]}" =~ "?" ]]; then
                         accessed_indices[0]="${!current_action}"
                     fi
@@ -142,7 +160,7 @@ while [ $won == "0" ]; do
                             i=${current_action[$((i-1))]}
                         ###if current index isn't an end code or question, print out the text
                         elif [[ ${current_action[$(($i-1))]} != "!" ]] && [[ ${current_action[$(($i-1))]} != "?" ]]; then
-                            echo -e "${current_action[$(($i - 1))]}" | randtype -t 15,7500
+                            type "${current_action[$(($i - 1))]}" 0
                         elif [[ ${current_action[$(($i-1))]} == "?" ]]; then
                             echo -e "\n"
                             for j in $(seq ${current_action[$i]} ); do
@@ -168,6 +186,7 @@ while [ $won == "0" ]; do
                             ###VERY SPECIAL, VERY SPECIFICALLY TIME DEPENDENT SITUATIONAL IF
                             if [[ "${accessed_indices[@]}" == "hallway_door 15 44 75 102" ]]; then
                                 i=114
+                                hallway_actions[2]=0
                                 echo -e "\n"
                                 continue
                             fi
@@ -175,13 +194,13 @@ while [ $won == "0" ]; do
 
                             ###jump to index of option chosen
                             echo -e -n "\n\nYou: "
-                            echo -e "'${current_action[$(( $(($i-1)) + $((2 * $REPLY)) ))]}'\n\n" | randtype -t 15,7500
+                            type "'${current_action[$(( $(($i-1)) + $((2 * $REPLY)) ))]}'\n\n" 0
                             if [[ ${current_action[$(( $(( 2 * ${current_action[$i]} )) + $i ))]} == "*" ]] && [[ $REPLY == $(($action_num - 1)) ]]; then
-                                echo -e "${current_action[ ${current_action[$(( $(($i + 1 )) + $((2 * $REPLY)) ))]} ]}" | randtype -t 15,7500
+                                type "${current_action[ ${current_action[$(( $(($i + 1 )) + $((2 * $REPLY)) ))]} ]}" 0
                                 current_action[$i]=$(( ${current_action[$i]} - 1 ))
                                 i=$(( ${current_action[$(( $(($i + 1)) + $((2 * $REPLY)) ))]} + 2 ))
                             else
-                                echo -e "${current_action[ ${current_action[$(( $i + $((2 * $REPLY)) ))]} ]}" | randtype -t 15,7500
+                                type "${current_action[ ${current_action[$(( $i + $((2 * $REPLY)) ))]} ]}" 0
                                 i=$(( ${current_action[$(( $i + $((2 * $REPLY)) ))]} + 2 ))
                             fi
                             ###quick check for any immediate ends or additional questions
@@ -226,14 +245,14 @@ while [ $won == "0" ]; do
                     ###all item info stored within one array/room, simpler info
                     ###just redirects where to read from based on item selected
                     if [[ $(( $REPLY - $(( ${#possible_actions[@]} / 3 )) )) == 1 ]]; then
-                        echo -e "${possible_items[1]}\n\n" | randtype -t 15,7500
+                        type "${possible_items[1]}\n\n" 0
                         previous_item=${possible_items[0]}
                         if [[ ${possible_items[2]} == ${items[ $(( ${#items[@]} - 1 )) ]} ]]; then
                             find_items "${possible_items[0]}"
                             items[$(($? + 2))]=$((${items[$(($? + 2))]} - 1))
                         fi
                     else
-                        echo -e "${possible_items[$(( $(( $(( $REPLY - $(( ${#possible_actions[@]} / 3 )) )) * 3 )) - 2 ))]}\n\n" | randtype -t 15,7500
+                        type "${possible_items[$(( $(( $(( $REPLY - $(( ${#possible_actions[@]} / 3 )) )) * 3 )) - 2 ))]}\n\n" 0
                         previous_item=${possible_items[$(( $(( $(( $REPLY - $(( ${#possible_actions[@]} / 3 )) )) * 3 )) - 3 ))]}
                         if [[ ${possible_items[$(( $(( $(( $REPLY - $(( ${#possible_actions[@]} / 3 )) )) * 3 )) - 1 ))]} == ${items[ $(( ${#items[@]} - 1 )) ]} ]]; then
                             find_items "${possible_items[$(( $(( $(( $REPLY - $(( ${#possible_actions[@]} / 3 )) )) * 3 )) - 3 ))]}"
@@ -267,7 +286,7 @@ while [ $won == "0" ]; do
                         dialogue_pos="$((${people[$(($? + 1))]} + 1))"
                     fi
                     ###whether or not to prepare array of indices for situational ifs
-                    unset $accessed_indices
+                    accessed_indices=()
                     if [[ "${current_person[*]}" =~ "?" ]]; then
                         accessed_indices[0]="${!current_person}"
                     fi
@@ -279,7 +298,7 @@ while [ $won == "0" ]; do
                         ###if current index isn't an end code or question, print out the dialogue
                         elif [[ ${current_person[$(($i-1))]} != "!" ]] && [[ ${current_person[$(($i-1))]} != "?" ]]; then
                             echo -n "$name: "
-                            echo -e "'${current_person[$(($i - 1))]}'" | randtype -t 15,7500
+                            type "'${current_person[$(($i - 1))]}'" 0
                             
                             ###Situational ifs
 
@@ -309,15 +328,15 @@ while [ $won == "0" ]; do
                             accessed_indices+=($(( $(($i-1)) + $((2 * $REPLY)) )))
                             ###jump to index of option chosen
                             echo -e -n "\n\nYou: "
-                            echo -e "'${current_person[$(( $(($i-1)) + $((2 * $REPLY)) ))]}'\n\n" | randtype -t 15,7500
+                            type "'${current_person[$(( $(($i-1)) + $((2 * $REPLY)) ))]}'\n\n" 0
                             echo -n "$name: "
                             ###check for * character, meaning a single time only question
                             if [[ ${current_person[$(( $(( 2 * ${current_person[$i]} )) + $i ))]} == "*" ]] && [[ $REPLY == $(($speak_num - 1)) ]]; then
-                                echo -e "'${current_person[ ${current_person[$(( $(($i + 1)) + $((2 * $REPLY)) ))]} ]}'" | randtype -t 15,7500
+                                type "'${current_person[ ${current_person[$(( $(($i + 1)) + $((2 * $REPLY)) ))]} ]}'" 0
                                 current_person[$i]=$(( ${current_person[$i]} - 1 ))
                                 i=$(( ${current_person[$(( $(($i + 1)) + $((2 * $REPLY)) ))]} + 2 ))
                             else
-                                echo -e "'${current_person[ ${current_person[$(( $i + $((2 * $REPLY)) ))]} ]}'" | randtype -t 15,7500
+                                type "'${current_person[ ${current_person[$(( $i + $((2 * $REPLY)) ))]} ]}'" 0
                                 i=$(( ${current_person[$(( $i + $((2 * $REPLY)) ))]} + 2 ))
                             fi
                             ###quick check for any immediate ends or additional questions
@@ -340,7 +359,6 @@ while [ $won == "0" ]; do
                     ###Situational ifs
 
                     ###
-
                     ###where to point to based upon person's AC
                     if [[ ${current_person[$((${#current_person[@]} - 1))]} == ?(-)+([0-9]) ]]; then
                         ###if person's AC < 1, essentially disable character from being talked to
