@@ -13,15 +13,83 @@ else
 fi
 
 won=0
+stty -echo
 
-declare -n room="office"
-if [[ $room == "" ]]; then
+declare -A room="office"
+declare -n actions="${room}_actions"
+declare -n items="${room}_items"
+declare -n people="${room}_people"
+declare -n new_rooms="${room}_rooms"
+declare -n descriptions="${room}_descriptions"
+if [[ ${new_rooms[@]} == "" ]]; then
     echo "Error: the starting location array within input.txt is either missing, or incorrectly labeled" && exit
 fi
-declare -n actions=${room[0]}
-declare -n items=${room[1]}
-declare -n people=${room[2]}
-declare -n new_rooms=${room[3]}
+
+list_options() {
+    unset possible_actions
+    unset possible_items
+    unset possible_people
+    unset possible_new_rooms
+	unset possible_descriptions
+    opt_num=1
+	echo #
+	###Description
+	for i in $(seq $(( ${#descriptions[@]} - 1 )) ); do
+		if [[ $(( i % 3 )) == 1 ]] && [[ ${descriptions[$((i))]} -ge ${descriptions[ $(( ${#descriptions[@]} - 1 )) ]} ]]; then
+			for j in {-1..1}; do
+				possible_descriptions+=( "${descriptions[$((i+j))]}" )
+			done
+			echo ${descriptions[i-1]}
+			if [[ ${descriptions[i]} -gt ${descriptions[ $(( ${#descriptions[@]} - 1 )) ]} ]]; then
+				descriptions[i]=0
+			fi
+		fi
+	done
+	echo #
+    ###Actions
+    for i in $(seq $(( ${#actions[@]} - 1 )) ); do
+        ### if i is an action - based on position in list - and has the correct associated unlocked code at end of list
+        if [[ $(( i % 3 )) == 1 ]] && [[ ${actions[$((i+1))]} -ge ${actions[ $(( ${#actions[@]} - 1 )) ]} ]]; then
+            ### Adds info from (room)_actions into possible_actions in case that action needs to be accessed
+            for j in {-1..1}; do
+                possible_actions+=( "${actions[$((i+j))]}" )
+            done
+            ### Prints the options and their associated #
+            echo "[$opt_num] ${actions[i]}"
+            opt_num=$(($opt_num+1))
+        fi
+    done
+    ###Items
+    for i in $(seq $(( ${#items[@]} - 1 )) ); do
+        if [[ $(( i % 3 )) == 1 ]] && [[ ${items[$((i+1))]} -ge ${items[ $(( ${#items[@]} - 1 )) ]} ]]; then
+            for j in {-1..1}; do
+                possible_items+=( "${items[$((i+j))]}" )
+            done
+            echo "[$opt_num] ${items[$((i-1))]}"
+            opt_num=$(($opt_num+1))
+        fi
+    done
+    ###People
+    for i in $(seq $(( ${#people[@]} - 1 )) ); do
+        if [[ $(( i % 3 )) == 1 ]] && [[ ${people[$((i+1))]} -ge ${people[ $(( ${#people[@]} - 1 )) ]} ]]; then
+            for j in {-1..1}; do
+                possible_people+=( "${people[$((i+j))]}" )
+            done
+            echo "[$opt_num] Speak to ${people[$i]}"
+            opt_num=$(($opt_num+1))
+        fi
+    done
+    ###Rooms
+    for i in $(seq $(( ${#new_rooms[@]} - 1 )) ); do
+        if [[ $(( i % 3 )) == 1 ]] && [[ ${new_rooms[$((i+1))]} -ge ${new_rooms[ $(( ${#new_rooms[@]} - 1 )) ]} ]]; then
+            for j in {-1..1}; do
+                possible_new_rooms+=( "${new_rooms[$((i+j))]}" )
+            done
+            echo "[$opt_num] Move to ${new_rooms[$i]}"
+            opt_num=$(($opt_num+1))
+        fi
+    done
+}
 
 ### find functions return index of the value passed into it
 find_items(){
@@ -67,66 +135,21 @@ type() {
     echo #
 }
 
+ask() {
+    stty echo  
+    read -N 10000000 -t 0.01
+    read -p "$1" && stty -echo
+}
+
 echo "Title"
-echo -e "Introduction\n\n"
+echo -e "Introduction"
 
 while [ $won == "0" ]; do
-    list_options() {
-        unset possible_actions
-        unset possible_items
-        unset possible_people
-        unset possible_new_rooms
-        opt_num=1
-        ###Actions
-        for i in $(seq $(( ${#actions[@]} - 1 )) ); do
-            ### if i is an action - based on position in list - and has the correct associated unlocked code at end of list
-            if [[ $(( i % 3 )) == 1 ]] && [[ ${actions[$((i+1))]} -ge ${actions[ $(( ${#actions[@]} - 1 )) ]} ]]; then
-                ### Adds info from (room)_actions into possible_actions in case that action needs to be accessed
-                for j in {-1..1}; do
-                    possible_actions+=( "${actions[$((i+j))]}" )
-                done
-                ### Prints the options and their associated #
-                echo "[$opt_num] ${actions[i]}"
-                opt_num=$(($opt_num+1))
-            fi
-        done
-        ###Items
-        for i in $(seq $(( ${#items[@]} - 1 )) ); do
-            if [[ $(( i % 3 )) == 1 ]] && [[ ${items[$((i+1))]} -ge ${items[ $(( ${#items[@]} - 1 )) ]} ]]; then
-                for j in {-1..1}; do
-                    possible_items+=( "${items[$((i+j))]}" )
-                done
-                echo "[$opt_num] ${items[$((i-1))]}"
-                opt_num=$(($opt_num+1))
-            fi
-        done
-        ###People
-        for i in $(seq $(( ${#people[@]} - 1 )) ); do
-            if [[ $(( i % 3 )) == 1 ]] && [[ ${people[$((i+1))]} -ge ${people[ $(( ${#people[@]} - 1 )) ]} ]]; then
-                for j in {-1..1}; do
-                    possible_people+=( "${people[$((i+j))]}" )
-                done
-                echo "[$opt_num] Speak to ${people[$i]}"
-                opt_num=$(($opt_num+1))
-            fi
-        done
-        ###Rooms
-        for i in $(seq $(( ${#new_rooms[@]} - 1 )) ); do
-            if [[ $(( i % 3 )) == 1 ]] && [[ ${new_rooms[$((i+1))]} -ge ${new_rooms[ $(( ${#new_rooms[@]} - 1 )) ]} ]]; then
-                for j in {-1..1}; do
-                    possible_new_rooms+=( "${new_rooms[$((i+j))]}" )
-                done
-                echo "[$opt_num] Move to ${new_rooms[$i]}"
-                opt_num=$(($opt_num+1))
-            fi
-        done
-    }
-
     while [[ true ]]; do
-    list_options
-    echo -e "\n"
-    read -p "You decide to... "
-    echo -e "\n"
+    	list_options
+    	echo -e "\n"
+    	ask "You decide to... "
+    	echo -e "\n"
         if [[ "$REPLY" != *" "* ]]; then
             if [[ $REPLY -lt $opt_num ]] && [[ $REPLY -gt 0 ]]; then
                 ###Actions
@@ -158,17 +181,29 @@ while [ $won == "0" ]; do
                         ###if current index is a #, jump to that index within the array
                         if [[ ${current_action[$((i-1))]} == ?(-)+([0-9]) ]]; then
                             i=${current_action[$((i-1))]}
+                        elif [[ ${current_action[$((i-1))]} == ">" ]]; then
+                            i=$(($i+2))
                         ###if current index isn't an end code or question, print out the text
                         elif [[ ${current_action[$(($i-1))]} != "!" ]] && [[ ${current_action[$(($i-1))]} != "?" ]]; then
                             type "${current_action[$(($i - 1))]}" 0
                         elif [[ ${current_action[$(($i-1))]} == "?" ]]; then
                             echo -e "\n"
+                            question_num=1
+                            unset question_choice
                             for j in $(seq ${current_action[$i]} ); do
-                                echo -e "[$action_num] '${current_action[$(( $(($i-1)) + $((2 * j)) ))]}'"
-                                action_num=$(($action_num + 1))
+                                if [[ ${current_action[$(( $(($i-1)) + $((3 * j)) ))]} != "^" ]]; then
+                                    if ${current_action[$(( $i + $((3 * j)) ))]} == "#" ]] && [[ $action_num == 1 ]]; then
+                                        break 2
+                                    else
+                                        echo -e "[$action_num] '${current_action[$(( $(($i-2)) + $((3 * j)) ))]}'"
+                                        action_num=$(($action_num + 1))
+                                        question_choice+=($question_num)
+                                    fi
+                                fi
+                                question_num=$(($question_num + 1))
                             done
                             echo -e "\n"
-                            read -p "You pick... "
+                            ask "You pick... "
                             if [[ "$REPLY" != *" "* ]]; then
                                 if [[ $REPLY -le 0 ]] || [[ $REPLY -gt $(($action_num - 1)) ]]; then
                                     echo -e "\n\nThat is not a possible option, please choose an option from the list shown"
@@ -181,38 +216,41 @@ while [ $won == "0" ]; do
                                 continue
                             fi
                             ###adds index of chosen answer to array, for situational ifs
-                            accessed_indices+=($(( $(($i-1)) + $((2 * $REPLY)) )))
+                            accessed_indices+=($(( $(($i-2)) + $((3 * ${question_choice[$(($REPLY-1))]})) )))
 
                             ###VERY SPECIAL, VERY SPECIFICALLY TIME DEPENDENT SITUATIONAL IF
-                            if [[ "${accessed_indices[@]}" == "hallway_door 15 44 75 102" ]]; then
-                                i=114
-                                hallway_actions[2]=0
-                                echo -e "\n"
-                                continue
-                            fi
+
                             ###
 
                             ###jump to index of option chosen
                             echo -e -n "\n\nYou: "
-                            type "'${current_action[$(( $(($i-1)) + $((2 * $REPLY)) ))]}'\n\n" 0
-                            if [[ ${current_action[$(( $(( 2 * ${current_action[$i]} )) + $i ))]} == "*" ]] && [[ $REPLY == $(($action_num - 1)) ]]; then
-                                type "${current_action[ ${current_action[$(( $(($i + 1 )) + $((2 * $REPLY)) ))]} ]}" 0
-                                current_action[$i]=$(( ${current_action[$i]} - 1 ))
-                                i=$(( ${current_action[$(( $(($i + 1)) + $((2 * $REPLY)) ))]} + 2 ))
+                            type "'${current_action[$(( $(($i-2)) + $((3 * ${question_choice[$(($REPLY-1))]})) ))]}'\n\n" 0
+                            if [[ ${current_action[$(( $i + $((3 * ${question_choice[$(($REPLY-1))]})) ))]} == "#" ]]; then
+                                break
+                            fi
+                            type "${current_action[ ${current_action[$(( $i + $((3 * ${question_choice[$(($REPLY-1))]})) ))]} ]}" 0
+                            ###check for * character, revert to ^ signifying not to use as option anymore
+                            if [[ ${current_action[$(( $(( ${question_choice[$(($REPLY-1))]} * 3 )) + $(($i-1)) ))]} == "*" ]]; then
+                                current_action[$(( $(( ${question_choice[$(($REPLY-1))]} * 3 )) + $(($i-1)) ))]="^"
+                            fi
+                            if [[ ${current_action[$(($i-1))]} != "#" ]]; then
+                                backup_i=$i
                             else
-                                type "${current_action[ ${current_action[$(( $i + $((2 * $REPLY)) ))]} ]}" 0
-                                i=$(( ${current_action[$(( $i + $((2 * $REPLY)) ))]} + 2 ))
+                                unset backup_i
+                                break
                             fi
-                            ###quick check for any immediate ends or additional questions
-                            if [[ ${current_action[$i+1]} == "?" ]]; then
-                                action_num=1
-                                echo -e "\n"
-                                continue
-                            fi
+                            ### person responds, i value adjusted accordingly
+                            i=$(( ${current_action[$i + $((3 * ${question_choice[$(($REPLY-1))]} ))]} + 2 ))
+                            ###whether or not an additional prompt is coming soon, may as well be sure the action_num is 1
+                            action_num=1
+                            ###quick check for any immediate ends
                             if [[ ${current_action[$(($i-1))]} == "!" ]]; then
                                 echo -e "\n"
                                 break
                             fi
+                        elif [[ ${current_action[$(($i-1))]} != "#" ]]; then
+                            ### must be set to backup minus one since it is about to loop back around, with i++ increasing it
+                            i=$(($backup_i-1))
                         ###if received end code, exit action
                         elif [[ ${current_action[$(($i-1))]} == "!" ]]; then
                             echo -e "\n"
@@ -220,7 +258,7 @@ while [ $won == "0" ]; do
                         fi
 
                         ##Situational ifs
-                        
+
                         ###
 
                     done
@@ -295,6 +333,8 @@ while [ $won == "0" ]; do
                         ###if current index is a #, jump to that index within the array
                         if [[ ${current_person[$((i-1))]} == ?(-)+([0-9]) ]]; then
                             i=${current_person[$((i-1))]}
+                        elif [[ ${current_person[$((i-1))]} == ">" ]]; then
+                            i=$(($i+2))
                         ###if current index isn't an end code or question, print out the dialogue
                         elif [[ ${current_person[$(($i-1))]} != "!" ]] && [[ ${current_person[$(($i-1))]} != "?" ]]; then
                             echo -n "$name: "
@@ -307,12 +347,24 @@ while [ $won == "0" ]; do
                         ###if current index is a question read out possible answers
                         elif [[ ${current_person[$(($i-1))]} == "?" ]]; then
                             echo -e "\n"
+                            question_num=1
+                            unset question_choice
                             for j in $(seq ${current_person[$i]} ); do
-                                echo -e "[$speak_num] '${current_person[$(( $(($i-1)) + $((2 * j)) ))]}'"
-                                speak_num=$(($speak_num + 1))
+                                ### ^ following a question answer indicates it should not be displayed as an option
+                                if [[ ${current_person[$(( $(($i-1)) + $((3 * j)) ))]} != "^" ]]; then
+                                    if [[ ${current_person[$(( $i + $((3 * j)) ))]} == "#" ]] && [[ $speak_num == 1 ]] && [[ $i == $backup_i ]]; then
+                                        unset backup_i
+                                        break 2
+                                    else
+                                        echo -e "[$speak_num] '${current_person[$(( $(($i-2)) + $((3 * j)) ))]}'"
+                                        speak_num=$(($speak_num + 1))
+                                        question_choice+=($question_num)
+                                    fi
+                                fi
+                                question_num=$(($question_num + 1))
                             done
                             echo -e "\n"
-                            read -p "You say... "
+                            ask "You say... "
                             if [[ "$REPLY" != *" "* ]]; then
                                 if [[ $REPLY -le 0 ]] || [[ $REPLY -gt $(($speak_num - 1)) ]]; then
                                     echo -e "\n\nThat is not a possible option, please choose an option from the list shown"
@@ -325,30 +377,36 @@ while [ $won == "0" ]; do
                                 continue
                             fi
                             ###adds index of chosen answer to array, for situational ifs
-                            accessed_indices+=($(( $(($i-1)) + $((2 * $REPLY)) )))
+                            accessed_indices+=($(( $(($i-2)) + $((3 * ${question_choice[$(($REPLY-1))]})) )))
                             ###jump to index of option chosen
                             echo -e -n "\n\nYou: "
-                            type "'${current_person[$(( $(($i-1)) + $((2 * $REPLY)) ))]}'\n\n" 0
+                            type "'${current_person[$(( $(($i-2)) + $((3 * ${question_choice[$(($REPLY-1))]})) ))]}'\n\n" 0
+                            if [[ ${current_person[$(( $i + $((3 * ${question_choice[$(($REPLY-1))]})) ))]} == "#" ]]; then
+                                break
+                            fi
                             echo -n "$name: "
-                            ###check for * character, meaning a single time only question
-                            if [[ ${current_person[$(( $(( 2 * ${current_person[$i]} )) + $i ))]} == "*" ]] && [[ $REPLY == $(($speak_num - 1)) ]]; then
-                                type "'${current_person[ ${current_person[$(( $(($i + 1)) + $((2 * $REPLY)) ))]} ]}'" 0
-                                current_person[$i]=$(( ${current_person[$i]} - 1 ))
-                                i=$(( ${current_person[$(( $(($i + 1)) + $((2 * $REPLY)) ))]} + 2 ))
+                            type "'${current_person[ ${current_person[$(( $i + $((3 * ${question_choice[$(($REPLY-1))]})) ))]} ]}'" 0
+                            ###check for * character, revert to ^ signifying not to use as option anymore
+                            if [[ ${current_person[$(( $(( ${question_choice[$(($REPLY-1))]} * 3 )) + $(($i-1)) ))]} == "*" ]]; then
+                                current_person[$(( $(( ${question_choice[$(($REPLY-1))]} * 3 )) + $(($i-1)) ))]="^"
+                            fi
+                            if [[ ${current_person[$(($i-1))]} != "#" ]]; then
+                                backup_i=$i
                             else
-                                type "'${current_person[ ${current_person[$(( $i + $((2 * $REPLY)) ))]} ]}'" 0
-                                i=$(( ${current_person[$(( $i + $((2 * $REPLY)) ))]} + 2 ))
+                                unset backup_i
+                                break
                             fi
-                            ###quick check for any immediate ends or additional questions
-                            if [[ ${current_person[$i+1]} == "?" ]]; then
-                                speak_num=1
-                                echo -e "\n"
-                                continue
-                            fi
+                            i=$(( ${current_person[$i + $((3 * ${question_choice[$(($REPLY-1))]} ))]} + 2 ))
+                            ###whether or not an additional prompt is coming soon, may as well be sure the speak_num is 1
+                            speak_num=1
+                            ###quick check for any immediate ends
                             if [[ ${current_person[$(($i-1))]} == "!" ]]; then
                                 echo -e "\n"
                                 break
                             fi
+                        elif [[ ${current_person[$(($i-1))]} != "#" ]]; then
+                            ### must be set to backup minus one since it is about to loop back around, with i++ increasing it
+                            i=$(($backup_i-1))
                         ###if received end code, exit dialogue
                         elif [[ ${current_person[$(($i-1))]} == "!" ]]; then
                             echo -e "\n"
@@ -359,6 +417,7 @@ while [ $won == "0" ]; do
                     ###Situational ifs
 
                     ###
+
                     ###where to point to based upon person's AC
                     if [[ ${current_person[$((${#current_person[@]} - 1))]} == ?(-)+([0-9]) ]]; then
                         ###if person's AC < 1, essentially disable character from being talked to
@@ -367,7 +426,7 @@ while [ $won == "0" ]; do
                         ###if person's AC == 1, dialogue starts as normal
                         elif [[ ${current_person[$((${#current_person[@]} - 1))]} == 1 ]]; then
                             continue
-                        ###if person AC > array AC, after initial greeting, redirect to index of array that is array AC
+                        ###if person AC > array AC, redirect to index of array that is array AC
                         elif [[ ${current_person[$((${#current_person[@]} - 1))]} -gt 1 ]]; then
                             current_person[1]="${current_person[$((${#current_person[@]} - 1))]}"
                         fi
@@ -378,17 +437,18 @@ while [ $won == "0" ]; do
                 elif [[ $(( $REPLY - $(( ${#possible_actions[@]} / 3 )) - $(( ${#possible_items[@]} / 3 )) - $(( ${#possible_people[@]} / 3 )) )) -le $(( ${#possible_new_rooms[@]} / 3 )) ]]; then
                     clear
                     if [[ $(( $REPLY - $(( ${#possible_actions[@]} / 3 )) - $(( ${#possible_items[@]} / 3 )) - $(( ${#possible_people[@]} / 3 )) )) == 1 ]]; then
-                        echo -e "You move to ${possible_new_rooms[1]}\n\n"
-                        declare -n room="${possible_new_rooms[0]}"
+                        echo -e "You move to ${possible_new_rooms[1]}"
+                        declare -A room="${possible_new_rooms[0]}"
                     else
-                        echo -e "You move to ${possible_new_rooms[$(( $(( $(( $REPLY - $(( ${#possible_actions[@]} / 3 )) - $(( ${#possible_items[@]} / 3 )) - $(( ${#possible_people[@]} / 3 )) )) * 3 )) - 2 ))]}\n\n"
-                        declare -n room="${possible_new_rooms[$(( $(( $(( $REPLY - $(( ${#possible_actions[@]} / 3 )) - $(( ${#possible_items[@]} / 3 )) - $(( ${#possible_people[@]} / 3 )) )) * 3 )) - 3 ))]}"
+                        echo -e "You move to ${possible_new_rooms[$(( $(( $(( $REPLY - $(( ${#possible_actions[@]} / 3 )) - $(( ${#possible_items[@]} / 3 )) - $(( ${#possible_people[@]} / 3 )) )) * 3 )) - 2 ))]}"
+                        declare -A room="${possible_new_rooms[$(( $(( $(( $REPLY - $(( ${#possible_actions[@]} / 3 )) - $(( ${#possible_items[@]} / 3 )) - $(( ${#possible_people[@]} / 3 )) )) * 3 )) - 3 ))]}"
                     fi
                     ###reassign current array's for all associated objects
-                    declare -n actions=${room[0]}
-                    declare -n items=${room[1]}
-                    declare -n people=${room[2]}
-                    declare -n new_rooms=${room[3]}
+                    declare -n actions="${room}_actions"
+                    declare -n items="${room}_items"
+                    declare -n people="${room}_people"
+                    declare -n new_rooms="${room}_rooms"
+					declare -n descriptions="${room}_descriptions"
                     continue
                 fi
             else

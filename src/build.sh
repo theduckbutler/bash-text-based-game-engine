@@ -5,7 +5,7 @@ empty="X=( \"X_actions\" \"X_items\" \"X_people\" \"X_rooms\" )"
 file="input.txt"
 
 add_to_file() {
-    #besides main sed, others are to make sure \n doesn't get in the way
+    #remove any \n's so sed doesn;t get angry
     sed -i 's/\\n/​/g' $file
     readarray -t input < $file
     for array in "${input[@]}"; do
@@ -43,7 +43,9 @@ add_to_file() {
     else
         final_addon="$final_addon$second_last_index $final_index )"
     fi
+    #update array in input.txt file
     sed -i "s/\($container_array\).*/\1$final_addon/" $file
+    #add the \n's back in after sed does its thing
     sed -i 's/​/\\n/g' $file
     readarray -t input < $file
     for array in "${input[@]}"; do
@@ -82,18 +84,18 @@ while [[ pigs != flying_animal ]]; do
 
     echo -e "\nPossible Editing Actions are...\n\n[1] List actions in current file\n[2] List items in current file\n[3] List people in current file\n[4] List rooms in currrent file\n[5] Add new action\n[6] Add new item\n[7] Add new person\n[8] Add new room\n[9] Finish building story\n"
 
-    read -p "Choose..."
+    read -p "Choose..." add_choice
     echo #
 
-    if [[ $REPLY == ?(-)+([0-9]) ]]; then
+    if [[ $add_choice == ?(-)+([0-9]) ]]; then
         #listing
-        if [[ $REPLY -le 4 ]] && [[ $REPLY -gt 0 ]]; then
+        if [[ $add_choice -le 4 ]] && [[ $add_choice -gt 0 ]]; then
             for array in "${input[@]}"; do
                 if [[ ! $array =~ [0-9] ]] && [[ ! $array ==  *"!"* ]]; then
                     removal=${array%%=*}
                     ###lookup is the name of the master room array that lists names of rooms items etc. (ie. office)
                     lookup="${array::${#removal}}"
-                    final=$lookup[$(($REPLY-1))]
+                    final=$lookup[$(($add_choice-1))]
                     ###want is the array name of the thing looked for within the master room list (ie. office_actions)
                     want="${!final}"
                     declare -n destination=${want[*]}
@@ -113,8 +115,7 @@ while [[ pigs != flying_animal ]]; do
             continue
         fi
         #adding
-        if [[ $REPLY -le 8 ]] && [[ $REPLY -gt 4 ]]; then
-            add_choice=$REPLY
+        if [[ $add_choice -le 8 ]] && [[ $add_choice -gt 4 ]]; then
             echo -e "\nWhich room do you want to add to?\n"
             i=1
             for array in "${input[@]}"; do
@@ -125,12 +126,11 @@ while [[ pigs != flying_animal ]]; do
                 fi
             done
             echo #
-            read -p "Choose..."
-            which_room=$REPLY
-            if [[ $REPLY == [0-9] ]] && [[ $REPLY -gt 0 ]] && [[ $REPLY -lt $i ]]; then
+            read -p "Choose..." which_room
+            if [[ $which_room == [0-9] ]] && [[ $which_room -gt 0 ]] && [[ $which_room -lt $i ]]; then
                 i=0
                 for array in "${input[@]}"; do
-                    if [[ $REPLY != $i ]] && [[ ! $array =~ [0-9] ]] && [[ ! $array == *"!"* ]]; then
+                    if [[ $which_room != $i ]] && [[ ! $array =~ [0-9] ]] && [[ ! $array == *"!"* ]]; then
                         removal=${array%%=*}
                         i=$(($i+1))
                     fi
@@ -140,18 +140,21 @@ while [[ pigs != flying_animal ]]; do
                 new="${removal}${types[$(($add_choice-5))]}"
                 #choose name for array of new thing
                 if [[ $add_choice != 6 ]]; then
-                    read -p "Array name for the ${title[$(($add_choice-5))]}: "
-                    if [[ $REPLY != "" ]]; then
-                        new_array_name=$REPLY
+                    read -p "Array name for the ${title[$(($add_choice-5))]}: " new_array_name
+                    if [[ $new_array_name != "" ]]; then
                         declare -n next=$new_array_name
                         if [[ "${next[0]}" == "" ]]; then
                             echo #
                             echo #
                             #choose display name
-                            read -p "Name for the ${title[$(($add_choice-5))]} to display as: "
-                            if [[ $REPLY != "" ]]; then
-                                display_name="$REPLY"
-                                echo -e "\n\nAssign property to final item of array\n"
+                            read -p "Name for the ${title[$(($add_choice-5))]} to display as: " display_name
+                            echo $add_choice
+                            if [[ $display_name != "" ]]; then
+                                if [[ $add_choice != "8" ]]; then
+                                    echo -e "\n\nAssign property to final item of array\n"
+                                elif [[ $add_choice == "8" ]]; then
+                                    echo -e "\n\nAssign ability to move into existing room\n"
+                                fi
                                 echo -e "[1] Make the ${title[$(($add_choice-5))]} interactable\n[2] Make the ${title[$(($add_choice-5))]} not currently interactable\n\n"
                                 read -p "Choose..."
                                 echo #
@@ -174,14 +177,25 @@ while [[ pigs != flying_animal ]]; do
                                             printf "%s%s=( 1 )\n" "$new_array_name" "$i" >> $file
                                         done
                                         echo -e "\nDo you want to be able to move between both rooms, or just have a one way connection?\n\n[1] Two way connection (both '$new_array_name' to '$removal' and '$removal' to '$new_array_name')\n[2] One way connection (only '$removal' to '$new_array_name')\n[3] One way connection (only '$new_array_name' to '$removal')\n"
-                                        read -p "Choose..."
-                                        room_direction=$REPLY
-                                        if [[ $REPLY == 1 ]] || [[ $REPLY == 3 ]]; then
+                                        read -p "Choose..." room_direction
+                                        if [[ $room_direction == 1 ]] || [[ $room_direction == 3 ]]; then
                                             echo -e "\n\nDisplay name for the connecting room (from '$display_name' to ...) to display as\n"
                                             read -p "Choose..."
                                             echo #
-                                            add_to_file "${new_array_name}_rooms" $removal $REPLY
-                                        elif [[ $REPLY != 2 ]]; then
+                                            add_to_file "${new_array_name}_rooms" $removal "$REPLY"
+                                            echo -e "\n\nAssign abilty to move into '$display_name'\n"
+                                            echo -e "[1] Make the ${title[$(($add_choice-5))]} interactable\n[2] Make the ${title[$(($add_choice-5))]} not currently interactable\n\n"
+                                            read -p "Choose..."
+                                            echo #
+                                            #determine interactability code
+                                            if [[ $REPLY == 1 ]]; then
+                                                interactability=$REPLY
+                                            elif [[ $REPLY == 2 ]]; then
+                                                interactability=$(($REPLY-2))
+                                            else
+                                                echo -e "\n\nThat is not a possible option\n" && continue
+                                            fi 
+                                        elif [[ $room_direction != 2 ]]; then
                                             echo -e "\n\nThat is not a possible option\n'$new_array_name' must be connected to seperare rooms manually now" && continue
                                         fi 
                                     fi
@@ -203,9 +217,8 @@ while [[ pigs != flying_animal ]]; do
                     fi
                 else
                     #silly funny different rules for adding an item
-                    read -p "Prompt for the ${title[$(($add_choice-5))]} to display as: "
-                    if [[ $REPLY != "" ]]; then
-                        display_name="$REPLY"
+                    read -p "Prompt for the ${title[$(($add_choice-5))]} to display as: " display_name
+                    if [[ $display_name != "" ]]; then
                         echo -e "\n\nAssign property to final item of array\n"
                         echo -e "[1] Make the ${title[$(($add_choice-5))]} disappear after one interaction\n[2] Make the ${title[$(($add_choice-5))]} remain available for interaction\n[3] Make the ${title[$(($add_choice-5))]} not currently interactable\n\n"
                         read -p "Choose..."
@@ -224,9 +237,9 @@ while [[ pigs != flying_animal ]]; do
                     fi
                 fi
             else
-                echo -e "\n\nArray '$REPLY' either does not exist or cannot be edited (make sure to input the associated number)\n" && continue
+                echo -e "\n\nArray '$which_room' either does not exist or cannot be edited (make sure to input the associated number)\n" && continue
             fi
-        elif [[ $REPLY == 9 ]]; then
+        elif [[ $add_choice == 9 ]]; then
             exit
         else
             echo -e "\nThat is not a possible option\n" && continue
