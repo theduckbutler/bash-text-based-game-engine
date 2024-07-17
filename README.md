@@ -1,4 +1,7 @@
 # bash-text-based-game-engine
+
+***This is a passion project that is only worked on every few months, if a commit actually works, it will be explicitly stated***
+
 This 'engine' allows you to create your own stories and worlds, and then play through them in a bash terminal! Allowing you to add people, items, actions, and adjacent rooms, the possibilites are endless. There is a simple default 'world' with just a handful of things to do for a taste of the possible capabilities.
 
 To run, just ensure both ```game.sh``` and ```input.txt``` are in the same directory, and run ```bash game.sh```.
